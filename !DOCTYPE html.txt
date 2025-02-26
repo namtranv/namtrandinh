@@ -1,0 +1,2598 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Học Tập</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #5D5CDE;
+            --primary-hover: #4a49b7;
+            --bg-light: #FFFFFF;
+            --bg-dark: #181818;
+            --text-light: #333333;
+            --text-dark: #f0f0f0;
+        }
+
+        .dark {
+            --bg-color: var(--bg-dark);
+            --text-color: var(--text-dark);
+            --card-bg: #252525;
+            --border-color: #444;
+        }
+
+        .light {
+            --bg-color: var(--bg-light);
+            --text-color: var(--text-light);
+            --card-bg: #f5f5f5;
+            --border-color: #ddd;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .subject-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width 0.5s ease;
+        }
+
+        .custom-file-upload {
+            border: 1px dashed var(--border-color);
+            display: inline-block;
+            padding: 16px 24px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .custom-file-upload:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(93, 92, 222, 0.05);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid var(--primary-color);
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .editable-cell {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .editable-cell:hover {
+            background-color: rgba(93, 92, 222, 0.1);
+        }
+        
+        .edit-button {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        tr:hover .edit-button {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="min-h-screen light">
+
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row justify-between items-center mb-8">
+        <div class="flex items-center mb-4 md:mb-0">
+            <i class="fas fa-graduation-cap text-4xl text-primary mr-3" style="color: var(--primary-color);"></i>
+            <h1 class="text-2xl font-bold">Quản Lý Học Tập</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
+                <i class="fas fa-moon text-xl"></i>
+            </button>
+            <div class="relative">
+                <button id="profile-btn" class="flex items-center space-x-2 focus:outline-none">
+                    <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white" style="background-color: var(--primary-color);">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <span class="hidden md:inline">Học Viên</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Navigation -->
+    <nav class="card rounded-lg p-4 mb-8 overflow-x-auto">
+        <ul class="flex flex-nowrap space-x-1 md:space-x-2">
+            <li>
+                <button class="tab-button px-3 py-2 rounded-md text-sm md:text-base whitespace-nowrap" data-tab="home">
+                    <i class="fas fa-home mr-1"></i> Trang Chủ
+                </button>
+            </li>
+            <li>
+                <button class="tab-button px-3 py-2 rounded-md text-sm md:text-base whitespace-nowrap" data-tab="subjects">
+                    <i class="fas fa-book mr-1"></i> Môn Học
+                </button>
+            </li>
+            <li>
+                <button class="tab-button px-3 py-2 rounded-md text-sm md:text-base whitespace-nowrap" data-tab="documents">
+                    <i class="fas fa-file-upload mr-1"></i> Tài Liệu
+                </button>
+            </li>
+            <li>
+                <button class="tab-button px-3 py-2 rounded-md text-sm md:text-base whitespace-nowrap" data-tab="schedule">
+                    <i class="fas fa-calendar-alt mr-1"></i> Thời Gian Học
+                </button>
+            </li>
+            <li>
+                <button class="tab-button px-3 py-2 rounded-md text-sm md:text-base whitespace-nowrap" data-tab="results">
+                    <i class="fas fa-chart-line mr-1"></i> Kết Quả
+                </button>
+            </li>
+            <li>
+                <button class="tab-button px-3 py-2 rounded-md text-sm md:text-base whitespace-nowrap" data-tab="feedback">
+                    <i class="fas fa-comment mr-1"></i> Đánh Giá
+                </button>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Home Tab -->
+        <section id="home" class="tab-content active">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="card rounded-lg p-6 md:col-span-2">
+                    <h2 class="text-xl font-semibold mb-4">Tiến Độ Học Tập</h2>
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <span>Toán Học Cao Cấp</span>
+                                <span>75%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: 75%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <span>Lập Trình Hướng Đối Tượng</span>
+                                <span>60%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: 60%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <span>Cơ Sở Dữ Liệu</span>
+                                <span>40%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: 40%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <span>Tiếng Anh Chuyên Ngành</span>
+                                <span>90%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: 90%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card rounded-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4">Sắp Đến Hạn</h2>
+                    <ul class="space-y-4">
+                        <li class="flex items-start space-x-3">
+                            <div class="p-2 bg-red-100 text-red-600 rounded-md">
+                                <i class="fas fa-exclamation-circle"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium">Nộp bài tập Toán</p>
+                                <p class="text-sm opacity-75">Hạn: Hôm nay</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <div class="p-2 bg-yellow-100 text-yellow-600 rounded-md">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium">Kiểm tra CSDL</p>
+                                <p class="text-sm opacity-75">Còn 2 ngày</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <div class="p-2 bg-blue-100 text-blue-600 rounded-md">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium">Thuyết trình OOP</p>
+                                <p class="text-sm opacity-75">Còn 5 ngày</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div class="card rounded-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4">Thống Kê Học Tập</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center p-4 rounded-lg bg-opacity-10" style="background-color: rgba(93, 92, 222, 0.1);">
+                            <div class="text-3xl font-bold" style="color: var(--primary-color);">4</div>
+                            <p class="mt-1">Môn học</p>
+                        </div>
+                        <div class="text-center p-4 rounded-lg bg-opacity-10" style="background-color: rgba(93, 92, 222, 0.1);">
+                            <div class="text-3xl font-bold" style="color: var(--primary-color);">12</div>
+                            <p class="mt-1">Tài liệu</p>
+                        </div>
+                        <div class="text-center p-4 rounded-lg bg-opacity-10" style="background-color: rgba(93, 92, 222, 0.1);">
+                            <div class="text-3xl font-bold" style="color: var(--primary-color);">24</div>
+                            <p class="mt-1">Giờ học</p>
+                        </div>
+                        <div class="text-center p-4 rounded-lg bg-opacity-10" style="background-color: rgba(93, 92, 222, 0.1);">
+                            <div class="text-3xl font-bold" style="color: var(--primary-color);">8.5</div>
+                            <p class="mt-1">Điểm TB</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card rounded-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4">Hoạt Động Gần Đây</h2>
+                    <ul class="space-y-3">
+                        <li class="flex items-center space-x-3 text-sm">
+                            <span class="text-xs px-2 py-1 rounded-full" style="background-color: rgba(93, 92, 222, 0.1); color: var(--primary-color);">Hôm nay</span>
+                            <span>Tải lên 2 tài liệu môn Toán</span>
+                        </li>
+                        <li class="flex items-center space-x-3 text-sm">
+                            <span class="text-xs px-2 py-1 rounded-full" style="background-color: rgba(93, 92, 222, 0.1); color: var(--primary-color);">Hôm qua</span>
+                            <span>Hoàn thành bài tập CSDL</span>
+                        </li>
+                        <li class="flex items-center space-x-3 text-sm">
+                            <span class="text-xs px-2 py-1 rounded-full" style="background-color: rgba(93, 92, 222, 0.1); color: var(--primary-color);">3 ngày trước</span>
+                            <span>Tham gia buổi thảo luận OOP</span>
+                        </li>
+                        <li class="flex items-center space-x-3 text-sm">
+                            <span class="text-xs px-2 py-1 rounded-full" style="background-color: rgba(93, 92, 222, 0.1); color: var(--primary-color);">5 ngày trước</span>
+                            <span>Nhận điểm 9.0 bài kiểm tra Tiếng Anh</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Subjects Tab -->
+        <section id="subjects" class="tab-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Danh Sách Môn Học</h2>
+                <button id="add-subject-btn" class="px-4 py-2 text-white rounded-md" style="background-color: var(--primary-color);">
+                    <i class="fas fa-plus mr-1"></i> Thêm Môn Học
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="subjects-list">
+                <!-- Môn Toán Học Cao Cấp -->
+                <div class="card rounded-lg overflow-hidden transition-all duration-300 subject-item" data-subject-id="math101">
+                    <div class="h-32 flex items-center justify-center" style="background-color: rgba(93, 92, 222, 0.2);">
+                        <i class="fas fa-calculator text-5xl" style="color: var(--primary-color);"></i>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg mb-2">Toán Học Cao Cấp</h3>
+                        <p class="text-sm mb-3 opacity-75">Giảng viên: TS. Nguyễn Văn A</p>
+                        <div class="flex justify-between mb-2 text-sm">
+                            <span>Tiến độ</span>
+                            <span>75%</span>
+                        </div>
+                        <div class="progress-bar mb-3">
+                            <div class="progress-bar-fill" style="width: 75%"></div>
+                        </div>
+                        <div class="flex justify-between">
+                            <button class="text-sm font-medium px-3 py-1 rounded view-subject-btn" style="color: var(--primary-color);">
+                                Xem chi tiết <i class="fas fa-arrow-right ml-1"></i>
+                            </button>
+                            <button class="text-sm font-medium px-3 py-1 rounded edit-subject-btn" style="color: var(--primary-color);">
+                                <i class="fas fa-edit"></i> Sửa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Môn Lập Trình Hướng Đối Tượng -->
+                <div class="card rounded-lg overflow-hidden transition-all duration-300 subject-item" data-subject-id="prog202">
+                    <div class="h-32 flex items-center justify-center" style="background-color: rgba(93, 92, 222, 0.2);">
+                        <i class="fas fa-code text-5xl" style="color: var(--primary-color);"></i>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg mb-2">Lập Trình Hướng Đối Tượng</h3>
+                        <p class="text-sm mb-3 opacity-75">Giảng viên: ThS. Trần Thị B</p>
+                        <div class="flex justify-between mb-2 text-sm">
+                            <span>Tiến độ</span>
+                            <span>60%</span>
+                        </div>
+                        <div class="progress-bar mb-3">
+                            <div class="progress-bar-fill" style="width: 60%"></div>
+                        </div>
+                        <div class="flex justify-between">
+                            <button class="text-sm font-medium px-3 py-1 rounded view-subject-btn" style="color: var(--primary-color);">
+                                Xem chi tiết <i class="fas fa-arrow-right ml-1"></i>
+                            </button>
+                            <button class="text-sm font-medium px-3 py-1 rounded edit-subject-btn" style="color: var(--primary-color);">
+                                <i class="fas fa-edit"></i> Sửa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Môn Cơ Sở Dữ Liệu -->
+                <div class="card rounded-lg overflow-hidden transition-all duration-300 subject-item" data-subject-id="dbms303">
+                    <div class="h-32 flex items-center justify-center" style="background-color: rgba(93, 92, 222, 0.2);">
+                        <i class="fas fa-database text-5xl" style="color: var(--primary-color);"></i>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg mb-2">Cơ Sở Dữ Liệu</h3>
+                        <p class="text-sm mb-3 opacity-75">Giảng viên: TS. Lê Văn C</p>
+                        <div class="flex justify-between mb-2 text-sm">
+                            <span>Tiến độ</span>
+                            <span>40%</span>
+                        </div>
+                        <div class="progress-bar mb-3">
+                            <div class="progress-bar-fill" style="width: 40%"></div>
+                        </div>
+                        <div class="flex justify-between">
+                            <button class="text-sm font-medium px-3 py-1 rounded view-subject-btn" style="color: var(--primary-color);">
+                                Xem chi tiết <i class="fas fa-arrow-right ml-1"></i>
+                            </button>
+                            <button class="text-sm font-medium px-3 py-1 rounded edit-subject-btn" style="color: var(--primary-color);">
+                                <i class="fas fa-edit"></i> Sửa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Môn Tiếng Anh Chuyên Ngành -->
+                <div class="card rounded-lg overflow-hidden transition-all duration-300 subject-item" data-subject-id="eng204">
+                    <div class="h-32 flex items-center justify-center" style="background-color: rgba(93, 92, 222, 0.2);">
+                        <i class="fas fa-language text-5xl" style="color: var(--primary-color);"></i>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg mb-2">Tiếng Anh Chuyên Ngành</h3>
+                        <p class="text-sm mb-3 opacity-75">Giảng viên: ThS. Phạm Thị D</p>
+                        <div class="flex justify-between mb-2 text-sm">
+                            <span>Tiến độ</span>
+                            <span>90%</span>
+                        </div>
+                        <div class="progress-bar mb-3">
+                            <div class="progress-bar-fill" style="width: 90%"></div>
+                        </div>
+                        <div class="flex justify-between">
+                            <button class="text-sm font-medium px-3 py-1 rounded view-subject-btn" style="color: var(--primary-color);">
+                                Xem chi tiết <i class="fas fa-arrow-right ml-1"></i>
+                            </button>
+                            <button class="text-sm font-medium px-3 py-1 rounded edit-subject-btn" style="color: var(--primary-color);">
+                                <i class="fas fa-edit"></i> Sửa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Documents Tab -->
+        <section id="documents" class="tab-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Tài Liệu Học Tập</h2>
+                <button id="upload-document-btn" class="px-4 py-2 text-white rounded-md" style="background-color: var(--primary-color);">
+                    <i class="fas fa-upload mr-1"></i> Tải Lên Tài Liệu
+                </button>
+            </div>
+
+            <div class="mb-6">
+                <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                    <div class="w-full sm:w-1/3">
+                        <select id="document-filter" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="all">Tất cả môn học</option>
+                            <option value="math">Toán Học Cao Cấp</option>
+                            <option value="oop">Lập Trình Hướng Đối Tượng</option>
+                            <option value="database">Cơ Sở Dữ Liệu</option>
+                            <option value="english">Tiếng Anh Chuyên Ngành</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-2/3">
+                        <div class="relative">
+                            <input type="text" id="document-search" placeholder="Tìm kiếm tài liệu..." class="w-full p-3 border border-gray-300 rounded-md text-base pl-10 focus:outline-none focus:ring-2 focus:ring-primary">
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4" id="documents-list">
+                <!-- Tài liệu 1 -->
+                <div class="card rounded-lg p-4 flex flex-col md:flex-row md:items-center document-item" data-subject="math">
+                    <div class="flex-shrink-0 mr-4 mb-3 md:mb-0">
+                        <div class="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
+                            <i class="fas fa-file-pdf text-red-500 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow">
+                        <h3 class="font-medium mb-1">Giáo trình Đại số tuyến tính</h3>
+                        <p class="text-sm opacity-75 mb-2">Toán Học Cao Cấp • PDF • 5.2MB</p>
+                        <p class="text-xs opacity-75">Đã tải lên: 15/06/2023</p>
+                    </div>
+                    <div class="flex items-center mt-3 md:mt-0">
+                        <button class="p-2 rounded-md mr-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="p-2 rounded-md mr-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-star"></i>
+                        </button>
+                        <button class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tài liệu 2 -->
+                <div class="card rounded-lg p-4 flex flex-col md:flex-row md:items-center document-item" data-subject="oop">
+                    <div class="flex-shrink-0 mr-4 mb-3 md:mb-0">
+                        <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                            <i class="fas fa-file-word text-blue-500 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow">
+                        <h3 class="font-medium mb-1">Bài tập Java cơ bản</h3>
+                        <p class="text-sm opacity-75 mb-2">Lập Trình Hướng Đối Tượng • DOCX • 1.8MB</p>
+                        <p class="text-xs opacity-75">Đã tải lên: 10/06/2023</p>
+                    </div>
+                    <div class="flex items-center mt-3 md:mt-0">
+                        <button class="p-2 rounded-md mr-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="p-2 rounded-md mr-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-star"></i>
+                        </button>
+                        <button class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tài liệu 3 -->
+                <div class="card rounded-lg p-4 flex flex-col md:flex-row md:items-center document-item" data-subject="database">
+                    <div class="flex-shrink-0 mr-4 mb-3 md:mb-0">
+                        <div class="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                            <i class="fas fa-file-excel text-green-500 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow">
+                        <h3 class="font-medium mb-1">Mẫu lược đồ cơ sở dữ liệu</h3>
+                        <p class="text-sm opacity-75 mb-2">Cơ Sở Dữ Liệu • XLSX • 0.8MB</p>
+                        <p class="text-xs opacity-75">Đã tải lên: 05/06/2023</p>
+                    </div>
+                    <div class="flex items-center mt-3 md:mt-0">
+                        <button class="p-2 rounded-md mr-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="p-2 rounded-md mr-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-star"></i>
+                        </button>
+                        <button class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tài liệu 4 -->
+                <div class="card rounded-lg p-4 flex flex-col md:flex-row md:items-center document-item" data-subject="english">
+                    <div class="flex-shrink-0 mr-4 mb-3 md:mb-0">
+                        <div class="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
+                            <i class="fas fa-file-audio text-purple-500 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow">
+                        <h3 class="font-medium mb-1">Bài nghe Tiếng Anh chủ đề IT</h3>
+                        <p class="text-sm opacity-75 mb-2">Tiếng Anh Chuyên Ngành • MP3 • 12.5MB</p>
+                        <p class="text-xs opacity-75">Đã tải lên: 01/06/2023</p>
+                    </div>
+                    <div class="flex items-center mt-3 md:mt-0">
+                        <button class="p-2 rounded-md mr-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="p-2 rounded-md mr-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-star"></i>
+                        </button>
+                        <button class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tài liệu 5 -->
+                <div class="card rounded-lg p-4 flex flex-col md:flex-row md:items-center document-item" data-subject="oop">
+                    <div class="flex-shrink-0 mr-4 mb-3 md:mb-0">
+                        <div class="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center">
+                            <i class="fas fa-file-powerpoint text-yellow-500 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow">
+                        <h3 class="font-medium mb-1">Slide bài giảng OOP nâng cao</h3>
+                        <p class="text-sm opacity-75 mb-2">Lập Trình Hướng Đối Tượng • PPTX • 3.4MB</p>
+                        <p class="text-xs opacity-75">Đã tải lên: 28/05/2023</p>
+                    </div>
+                    <div class="flex items-center mt-3 md:mt-0">
+                        <button class="p-2 rounded-md mr-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="p-2 rounded-md mr-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-star"></i>
+                        </button>
+                        <button class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="upload-area" class="mt-8 hidden">
+                <h3 class="text-lg font-medium mb-4">Tải lên tài liệu mới</h3>
+                <div class="card rounded-lg p-6">
+                    <div class="mb-4">
+                        <label for="document-title" class="block text-sm font-medium mb-2">Tên tài liệu</label>
+                        <input type="text" id="document-title" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nhập tên tài liệu">
+                    </div>
+                    <div class="mb-4">
+                        <label for="document-subject" class="block text-sm font-medium mb-2">Môn học</label>
+                        <select id="document-subject" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="math">Toán Học Cao Cấp</option>
+                            <option value="oop">Lập Trình Hướng Đối Tượng</option>
+                            <option value="database">Cơ Sở Dữ Liệu</option>
+                            <option value="english">Tiếng Anh Chuyên Ngành</option>
+                        </select>
+                    </div>
+                    <div class="mb-6">
+                        <label for="document-file" class="block text-sm font-medium mb-2">Tệp tài liệu</label>
+                        <label class="custom-file-upload w-full">
+                            <input type="file" id="document-file" class="hidden">
+                            <div class="flex flex-col items-center justify-center">
+                                <i class="fas fa-cloud-upload-alt text-3xl mb-2" style="color: var(--primary-color);"></i>
+                                <p class="text-sm font-medium">Kéo thả file hoặc nhấp để chọn</p>
+                                <p class="text-xs opacity-75 mt-1">Hỗ trợ PDF, DOCX, PPT, XLSX, MP3, MP4</p>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="flex justify-end">
+                        <button id="cancel-upload-btn" class="px-4 py-2 border border-gray-300 rounded-md mr-2">Hủy</button>
+                        <button id="submit-document-btn" class="px-4 py-2 text-white rounded-md" style="background-color: var(--primary-color);">Tải lên</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Schedule Tab -->
+        <section id="schedule" class="tab-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Thời Gian Học Tập</h2>
+                <button id="add-schedule-btn" class="px-4 py-2 text-white rounded-md" style="background-color: var(--primary-color);">
+                    <i class="fas fa-plus mr-1"></i> Thêm Lịch Học
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <div class="card rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-medium">Lịch Học Tháng 7/2023</h3>
+                            <div class="flex">
+                                <button class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <button class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-7 gap-2 mb-2">
+                            <div class="text-center font-medium text-sm p-2">CN</div>
+                            <div class="text-center font-medium text-sm p-2">T2</div>
+                            <div class="text-center font-medium text-sm p-2">T3</div>
+                            <div class="text-center font-medium text-sm p-2">T4</div>
+                            <div class="text-center font-medium text-sm p-2">T5</div>
+                            <div class="text-center font-medium text-sm p-2">T6</div>
+                            <div class="text-center font-medium text-sm p-2">T7</div>
+                        </div>
+
+                        <div class="grid grid-cols-7 gap-2">
+                            <!-- Week 1 -->
+                            <div class="text-center p-2 text-gray-400">25</div>
+                            <div class="text-center p-2 text-gray-400">26</div>
+                            <div class="text-center p-2 text-gray-400">27</div>
+                            <div class="text-center p-2 text-gray-400">28</div>
+                            <div class="text-center p-2 text-gray-400">29</div>
+                            <div class="text-center p-2 text-gray-400">30</div>
+                            <div class="text-center p-2">1</div>
+
+                            <!-- Week 2 -->
+                            <div class="text-center p-2">2</div>
+                            <div class="text-center p-2 relative">
+                                3
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-5 h-1 rounded-full" style="background-color: var(--primary-color);"></div>
+                            </div>
+                            <div class="text-center p-2">4</div>
+                            <div class="text-center p-2 relative">
+                                5
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-5 h-1 rounded-full" style="background-color: var(--primary-color);"></div>
+                            </div>
+                            <div class="text-center p-2">6</div>
+                            <div class="text-center p-2 relative">
+                                7
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-5 h-1 rounded-full" style="background-color: var(--primary-color);"></div>
+                            </div>
+                            <div class="text-center p-2">8</div>
+
+                            <!-- Week 3 -->
+                            <div class="text-center p-2">9</div>
+                            <div class="text-center p-2 relative">
+                                10
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-5 h-1 rounded-full" style="background-color: var(--primary-color);"></div>
+                            </div>
+                            <div class="text-center p-2">11</div>
+                            <div class="text-center p-2 relative">
+                                12
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-5 h-1 rounded-full" style="background-color: var(--primary-color);"></div>
+                            </div>
+                            <div class="text-center p-2">13</div>
+                            <div class="text-center p-2 relative">
+                                14
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-5 h-1 rounded-full" style="background-color: var(--primary-color);"></div>
+                            </div>
+                            <div class="text-center p-2">15</div>
+
+                            <!-- Week 4 -->
+                            <div class="text-center p-2">16</div>
+                            <div class="text-center p-2 relative">
+                                17
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-5 h-1 rounded-full" style="background-color: var(--primary-color);"></div>
+                            </div>
+                            <div class="text-center p-2">18</div>
+                            <div class="text-center p-2 relative font-bold rounded-full" style="background-color: var(--primary-color); color: white;">
+                                19
+                            </div>
+                            <div class="text-center p-2">20</div>
+                            <div class="text-center p-2 relative">
+                                21
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-5 h-1 rounded-full" style="background-color: var(--primary-color);"></div>
+                            </div>
+                            <div class="text-center p-2">22</div>
+
+                            <!-- Week 5 -->
+                            <div class="text-center p-2">23</div>
+                            <div class="text-center p-2 relative">
+                                24
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-5 h-1 rounded-full" style="background-color: var(--primary-color);"></div>
+                            </div>
+                            <div class="text-center p-2">25</div>
+                            <div class="text-center p-2 relative">
+                                26
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-5 h-1 rounded-full" style="background-color: var(--primary-color);"></div>
+                            </div>
+                            <div class="text-center p-2">27</div>
+                            <div class="text-center p-2 relative">
+                                28
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-5 h-1 rounded-full" style="background-color: var(--primary-color);"></div>
+                            </div>
+                            <div class="text-center p-2">29</div>
+
+                            <!-- Week 6 -->
+                            <div class="text-center p-2">30</div>
+                            <div class="text-center p-2 relative">
+                                31
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-5 h-1 rounded-full" style="background-color: var(--primary-color);"></div>
+                            </div>
+                            <div class="text-center p-2 text-gray-400">1</div>
+                            <div class="text-center p-2 text-gray-400">2</div>
+                            <div class="text-center p-2 text-gray-400">3</div>
+                            <div class="text-center p-2 text-gray-400">4</div>
+                            <div class="text-center p-2 text-gray-400">5</div>
+                        </div>
+                    </div>
+
+                    <div class="card rounded-lg p-4 mt-6">
+                        <h3 class="font-medium mb-4">Lịch Học Hôm Nay (19/07/2023)</h3>
+                        
+                        <div class="space-y-4">
+                            <div class="rounded-lg p-3 flex items-center" style="background-color: rgba(93, 92, 222, 0.1);">
+                                <div class="flex-shrink-0 mr-3">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background-color: var(--primary-color); color: white;">
+                                        <i class="fas fa-calculator"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow">
+                                    <h4 class="font-medium">Toán Học Cao Cấp</h4>
+                                    <p class="text-sm opacity-75">7:30 - 9:30 | Phòng A1.203</p>
+                                </div>
+                                <div>
+                                    <span class="inline-block px-2 py-1 text-xs rounded-full" style="background-color: var(--primary-color); color: white;">
+                                        Sắp diễn ra
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="rounded-lg p-3 flex items-center" style="background-color: rgba(93, 92, 222, 0.1);">
+                                <div class="flex-shrink-0 mr-3">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background-color: var(--primary-color); color: white;">
+                                        <i class="fas fa-code"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow">
+                                    <h4 class="font-medium">Lập Trình Hướng Đối Tượng</h4>
+                                    <p class="text-sm opacity-75">13:00 - 16:30 | Phòng B2.405</p>
+                                </div>
+                                <div>
+                                    <span class="inline-block px-2 py-1 text-xs rounded-full bg-gray-200 dark:bg-gray-700">
+                                        Sắp tới
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="card rounded-lg p-4">
+                        <h3 class="font-medium mb-4">Thời Gian Học Tập Dự Kiến</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span>Toán Học Cao Cấp</span>
+                                    <span>45 giờ</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 70%"></div>
+                                </div>
+                                <div class="flex justify-between mt-1 text-xs">
+                                    <span>Đã học: 31.5 giờ</span>
+                                    <span>Còn lại: 13.5 giờ</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span>Lập Trình Hướng Đối Tượng</span>
+                                    <span>60 giờ</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 55%"></div>
+                                </div>
+                                <div class="flex justify-between mt-1 text-xs">
+                                    <span>Đã học: 33 giờ</span>
+                                    <span>Còn lại: 27 giờ</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span>Cơ Sở Dữ Liệu</span>
+                                    <span>45 giờ</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 40%"></div>
+                                </div>
+                                <div class="flex justify-between mt-1 text-xs">
+                                    <span>Đã học: 18 giờ</span>
+                                    <span>Còn lại: 27 giờ</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span>Tiếng Anh Chuyên Ngành</span>
+                                    <span>30 giờ</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 85%"></div>
+                                </div>
+                                <div class="flex justify-between mt-1 text-xs">
+                                    <span>Đã học: 25.5 giờ</span>
+                                    <span>Còn lại: 4.5 giờ</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <h4 class="font-medium mb-3">Tóm Tắt</h4>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span>Tổng thời gian học</span>
+                                    <span class="font-medium">180 giờ</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Đã học</span>
+                                    <span class="font-medium">108 giờ</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Còn lại</span>
+                                    <span class="font-medium">72 giờ</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Tiến độ tổng thể</span>
+                                    <span class="font-medium">60%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Tab -->
+        <section id="results" class="tab-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Kết Quả Học Tập</h2>
+                <div class="relative">
+                    <select id="result-semester" class="py-2 px-4 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary appearance-none pr-8">
+                        <option value="current">Học kỳ hiện tại</option>
+                        <option value="last">Học kỳ trước</option>
+                        <option value="all">Tất cả học kỳ</option>
+                    </select>
+                    <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none"></i>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <div class="card rounded-lg overflow-hidden">
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                            <h3 class="font-medium">Bảng Điểm Học Kỳ Hiện Tại</h3>
+                            <button id="edit-grades-toggle" class="px-3 py-1 text-sm rounded-md text-white" style="background-color: var(--primary-color);">
+                                <i class="fas fa-edit mr-1"></i> Chỉnh sửa điểm
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full" id="grades-table">
+                                <thead>
+                                    <tr class="text-left" style="background-color: rgba(93, 92, 222, 0.05);">
+                                        <th class="px-4 py-3 font-medium">Môn học</th>
+                                        <th class="px-4 py-3 font-medium">Mã môn</th>
+                                        <th class="px-4 py-3 font-medium">Số tín chỉ</th>
+                                        <th class="px-4 py-3 font-medium">Điểm QT</th>
+                                        <th class="px-4 py-3 font-medium">Điểm thi</th>
+                                        <th class="px-4 py-3 font-medium">Điểm TB</th>
+                                        <th class="px-4 py-3 font-medium">Xếp loại</th>
+                                        <th class="px-4 py-3 font-medium text-center">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    <tr data-subject-id="math101">
+                                        <td class="px-4 py-3">Toán Học Cao Cấp</td>
+                                        <td class="px-4 py-3">MATH101</td>
+                                        <td class="px-4 py-3">3</td>
+                                        <td class="px-4 py-3 editable-cell" data-field="midterm">8.5</td>
+                                        <td class="px-4 py-3 editable-cell" data-field="final">9.0</td>
+                                        <td class="px-4 py-3 font-medium average-grade">8.8</td>
+                                        <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 grade-label">Giỏi</span></td>
+                                        <td class="px-4 py-3 text-center">
+                                            <button class="p-1 edit-grade-btn edit-button" style="color: var(--primary-color);">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr data-subject-id="prog202">
+                                        <td class="px-4 py-3">Lập Trình Hướng Đối Tượng</td>
+                                        <td class="px-4 py-3">PROG202</td>
+                                        <td class="px-4 py-3">4</td>
+                                        <td class="px-4 py-3 editable-cell" data-field="midterm">8.0</td>
+                                        <td class="px-4 py-3 editable-cell" data-field="final">7.5</td>
+                                        <td class="px-4 py-3 font-medium average-grade">7.7</td>
+                                        <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 grade-label">Khá</span></td>
+                                        <td class="px-4 py-3 text-center">
+                                            <button class="p-1 edit-grade-btn edit-button" style="color: var(--primary-color);">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr data-subject-id="dbms303">
+                                        <td class="px-4 py-3">Cơ Sở Dữ Liệu</td>
+                                        <td class="px-4 py-3">DBMS303</td>
+                                        <td class="px-4 py-3">3</td>
+                                        <td class="px-4 py-3 editable-cell" data-field="midterm">7.0</td>
+                                        <td class="px-4 py-3 editable-cell" data-field="final">8.0</td>
+                                        <td class="px-4 py-3 font-medium average-grade">7.6</td>
+                                        <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 grade-label">Khá</span></td>
+                                        <td class="px-4 py-3 text-center">
+                                            <button class="p-1 edit-grade-btn edit-button" style="color: var(--primary-color);">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr data-subject-id="eng204">
+                                        <td class="px-4 py-3">Tiếng Anh Chuyên Ngành</td>
+                                        <td class="px-4 py-3">ENG204</td>
+                                        <td class="px-4 py-3">2</td>
+                                        <td class="px-4 py-3 editable-cell" data-field="midterm">9.5</td>
+                                        <td class="px-4 py-3 editable-cell" data-field="final">9.0</td>
+                                        <td class="px-4 py-3 font-medium average-grade">9.2</td>
+                                        <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 grade-label">Xuất sắc</span></td>
+                                        <td class="px-4 py-3 text-center">
+                                            <button class="p-1 edit-grade-btn edit-button" style="color: var(--primary-color);">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="font-medium" style="background-color: rgba(93, 92, 222, 0.05);">
+                                        <td class="px-4 py-3" colspan="2">Điểm trung bình học kỳ</td>
+                                        <td class="px-4 py-3" id="total-credits">12</td>
+                                        <td class="px-4 py-3" colspan="2"></td>
+                                        <td class="px-4 py-3 font-bold" id="semester-average">8.3</td>
+                                        <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800" id="semester-grade-label">Giỏi</span></td>
+                                        <td class="px-4 py-3"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card rounded-lg p-4 mt-6">
+                        <h3 class="font-medium mb-4">Các Thành Tích Học Tập</h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-start space-x-3">
+                                <div class="p-2 rounded-full" style="background-color: rgba(93, 92, 222, 0.1);">
+                                    <i class="fas fa-medal text-xl" style="color: var(--primary-color);"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">Sinh viên xuất sắc học kỳ trước</h4>
+                                    <p class="text-sm opacity-75">Xếp hạng 5/120 sinh viên trong lớp</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3">
+                                <div class="p-2 rounded-full" style="background-color: rgba(93, 92, 222, 0.1);">
+                                    <i class="fas fa-trophy text-xl" style="color: var(--primary-color);"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">Giải Nhì cuộc thi lập trình sinh viên</h4>
+                                    <p class="text-sm opacity-75">Tháng 5/2023</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3">
+                                <div class="p-2 rounded-full" style="background-color: rgba(93, 92, 222, 0.1);">
+                                    <i class="fas fa-certificate text-xl" style="color: var(--primary-color);"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">Chứng chỉ TOEIC 750</h4>
+                                    <p class="text-sm opacity-75">Tháng 3/2023</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="card rounded-lg p-4">
+                        <h3 class="font-medium mb-4">Tổng Quan Kết Quả</h3>
+                        
+                        <div class="flex justify-center mb-6">
+                            <div class="w-36 h-36 rounded-full border-8 flex items-center justify-center relative" style="border-color: var(--primary-color);">
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold" id="overall-gpa">8.3</div>
+                                    <div class="text-sm">GPA</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span>Điểm cao nhất</span>
+                                    <span class="font-medium" id="highest-grade">9.2</span>
+                                </div>
+                                <div class="text-sm opacity-75" id="highest-subject">Tiếng Anh Chuyên Ngành</div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span>Điểm thấp nhất</span>
+                                    <span class="font-medium" id="lowest-grade">7.6</span>
+                                </div>
+                                <div class="text-sm opacity-75" id="lowest-subject">Cơ Sở Dữ Liệu</div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span>Tổng số tín chỉ</span>
+                                    <span class="font-medium">12/140</span>
+                                </div>
+                                <div class="text-sm opacity-75">Hoàn thành 8.6%</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <h4 class="font-medium mb-3">Phân Phối Điểm</h4>
+                            <div class="space-y-3" id="grade-distribution">
+                                <div>
+                                    <div class="flex justify-between mb-1 text-sm">
+                                        <span>Xuất sắc (9.0-10)</span>
+                                        <span id="excellent-count">1 môn</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill" id="excellent-bar" style="width: 25%; background-color: #10B981;"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1 text-sm">
+                                        <span>Giỏi (8.0-8.9)</span>
+                                        <span id="great-count">1 môn</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill" id="great-bar" style="width: 25%; background-color: #6366F1;"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1 text-sm">
+                                        <span>Khá (7.0-7.9)</span>
+                                        <span id="good-count">2 môn</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill" id="good-bar" style="width: 50%; background-color: #F59E0B;"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1 text-sm">
+                                        <span>Trung bình (5.0-6.9)</span>
+                                        <span id="average-count">0 môn</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill" id="average-bar" style="width: 0%; background-color: #EF4444;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <button class="w-full py-2 text-white rounded-md" style="background-color: var(--primary-color);">
+                                <i class="fas fa-download mr-1"></i> Xuất Bảng Điểm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feedback Tab -->
+        <section id="feedback" class="tab-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Đánh Giá & Nhận Xét</h2>
+                <button id="add-feedback-btn" class="px-4 py-2 text-white rounded-md" style="background-color: var(--primary-color);">
+                    <i class="fas fa-plus mr-1"></i> Thêm Đánh Giá
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <div class="space-y-6">
+                        <!-- Đánh giá môn Toán -->
+                        <div class="card rounded-lg p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="font-medium text-lg">Toán Học Cao Cấp</h3>
+                                    <p class="text-sm opacity-75">Giảng viên: TS. Nguyễn Văn A</p>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="flex">
+                                        <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                        <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                        <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                        <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                        <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                    </div>
+                                    <span class="ml-2 font-medium">5.0</span>
+                                </div>
+                            </div>
+                            <p class="mb-4">Giảng viên giảng dạy rất tận tâm và dễ hiểu. Tài liệu học tập đầy đủ và phong phú. Tôi đặc biệt thích cách giảng viên liên hệ kiến thức toán học với các ứng dụng thực tế trong lĩnh vực công nghệ thông tin.</p>
+                            <div class="flex justify-between text-sm">
+                                <span class="opacity-75">Đánh giá vào: 01/06/2023</span>
+                                <div>
+                                    <button class="text-blue-600 dark:text-blue-400 mr-3">Chỉnh sửa</button>
+                                    <button class="text-red-600 dark:text-red-400">Xóa</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Đánh giá môn Lập trình -->
+                        <div class="card rounded-lg p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="font-medium text-lg">Lập Trình Hướng Đối Tượng</h3>
+                                    <p class="text-sm opacity-75">Giảng viên: ThS. Trần Thị B</p>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="flex">
+                                        <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                        <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                        <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                        <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                        <i class="far fa-star" style="color: #F59E0B;"></i>
+                                    </div>
+                                    <span class="ml-2 font-medium">4.0</span>
+                                </div>
+                            </div>
+                            <p class="mb-4">Môn học có nhiều bài tập thực hành giúp củng cố kiến thức rất tốt. Tuy nhiên, đôi khi tốc độ giảng hơi nhanh, khó theo kịp với những sinh viên chưa có nền tảng lập trình. Mong giảng viên có thể dành thêm thời gian cho những sinh viên cần hỗ trợ thêm.</p>
+                            <div class="flex justify-between text-sm">
+                                <span class="opacity-75">Đánh giá vào: 15/05/2023</span>
+                                <div>
+                                    <button class="text-blue-600 dark:text-blue-400 mr-3">Chỉnh sửa</button>
+                                    <button class="text-red-600 dark:text-red-400">Xóa</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Đánh giá môn CSDL -->
+                        <div class="card rounded-lg p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="font-medium text-lg">Cơ Sở Dữ Liệu</h3>
+                                    <p class="text-sm opacity-75">Giảng viên: TS. Lê Văn C</p>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="flex">
+                                        <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                        <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                        <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                        <i class="fas fa-star-half-alt" style="color: #F59E0B;"></i>
+                                        <i class="far fa-star" style="color: #F59E0B;"></i>
+                                    </div>
+                                    <span class="ml-2 font-medium">3.5</span>
+                                </div>
+                            </div>
+                            <p class="mb-4">Nội dung môn học khá thú vị và thực tế. Tuy nhiên, phòng thực hành đôi khi gặp vấn đề kỹ thuật làm ảnh hưởng đến quá trình học. Giảng viên có chuyên môn tốt nhưng đôi khi hơi thiếu kiên nhẫn với câu hỏi của sinh viên.</p>
+                            <div class="flex justify-between text-sm">
+                                <span class="opacity-75">Đánh giá vào: 10/04/2023</span>
+                                <div>
+                                    <button class="text-blue-600 dark:text-blue-400 mr-3">Chỉnh sửa</button>
+                                    <button class="text-red-600 dark:text-red-400">Xóa</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="card rounded-lg p-4 mb-6">
+                        <h3 class="font-medium mb-4">Trung Bình Đánh Giá</h3>
+                        <div class="flex items-center justify-center mb-4">
+                            <div class="text-4xl font-bold mr-2">4.2</div>
+                            <div class="flex">
+                                <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                <i class="fas fa-star" style="color: #F59E0B;"></i>
+                                <i class="fas fa-star-half-alt" style="color: #F59E0B;"></i>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <div class="flex items-center mr-2">
+                                    <span>5</span>
+                                    <i class="fas fa-star text-xs ml-1" style="color: #F59E0B;"></i>
+                                </div>
+                                <div class="flex-grow progress-bar">
+                                    <div class="progress-bar-fill" style="width: 25%; background-color: #F59E0B;"></div>
+                                </div>
+                                <div class="ml-2 text-sm">1</div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="flex items-center mr-2">
+                                    <span>4</span>
+                                    <i class="fas fa-star text-xs ml-1" style="color: #F59E0B;"></i>
+                                </div>
+                                <div class="flex-grow progress-bar">
+                                    <div class="progress-bar-fill" style="width: 25%; background-color: #F59E0B;"></div>
+                                </div>
+                                <div class="ml-2 text-sm">1</div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="flex items-center mr-2">
+                                    <span>3</span>
+                                    <i class="fas fa-star text-xs ml-1" style="color: #F59E0B;"></i>
+                                </div>
+                                <div class="flex-grow progress-bar">
+                                    <div class="progress-bar-fill" style="width: 25%; background-color: #F59E0B;"></div>
+                                </div>
+                                <div class="ml-2 text-sm">1</div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="flex items-center mr-2">
+                                    <span>2</span>
+                                    <i class="fas fa-star text-xs ml-1" style="color: #F59E0B;"></i>
+                                </div>
+                                <div class="flex-grow progress-bar">
+                                    <div class="progress-bar-fill" style="width: 0%; background-color: #F59E0B;"></div>
+                                </div>
+                                <div class="ml-2 text-sm">0</div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="flex items-center mr-2">
+                                    <span>1</span>
+                                    <i class="fas fa-star text-xs ml-1" style="color: #F59E0B;"></i>
+                                </div>
+                                <div class="flex-grow progress-bar">
+                                    <div class="progress-bar-fill" style="width: 0%; background-color: #F59E0B;"></div>
+                                </div>
+                                <div class="ml-2 text-sm">0</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-sm text-center opacity-75">
+                            Dựa trên 3 đánh giá
+                        </div>
+                    </div>
+
+                    <div class="card rounded-lg p-4">
+                        <h3 class="font-medium mb-4">Đánh Giá Theo Tiêu Chí</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span>Chất lượng giảng dạy</span>
+                                    <div class="flex items-center">
+                                        <span class="mr-1">4.5</span>
+                                        <i class="fas fa-star text-xs" style="color: #F59E0B;"></i>
+                                    </div>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 90%; background-color: #F59E0B;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span>Tài liệu học tập</span>
+                                    <div class="flex items-center">
+                                        <span class="mr-1">4.3</span>
+                                        <i class="fas fa-star text-xs" style="color: #F59E0B;"></i>
+                                    </div>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 86%; background-color: #F59E0B;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span>Cơ sở vật chất</span>
+                                    <div class="flex items-center">
+                                        <span class="mr-1">3.7</span>
+                                        <i class="fas fa-star text-xs" style="color: #F59E0B;"></i>
+                                    </div>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 74%; background-color: #F59E0B;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span>Phương pháp đánh giá</span>
+                                    <div class="flex items-center">
+                                        <span class="mr-1">4.0</span>
+                                        <i class="fas fa-star text-xs" style="color: #F59E0B;"></i>
+                                    </div>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 80%; background-color: #F59E0B;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span>Sự hỗ trợ từ giảng viên</span>
+                                    <div class="flex items-center">
+                                        <span class="mr-1">4.2</span>
+                                        <i class="fas fa-star text-xs" style="color: #F59E0B;"></i>
+                                    </div>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 84%; background-color: #F59E0B;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="feedback-form" class="card rounded-lg p-6 mt-6 hidden">
+                <h3 class="text-lg font-medium mb-4">Thêm Đánh Giá Mới</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="feedback-subject" class="block text-sm font-medium mb-2">Môn học</label>
+                        <select id="feedback-subject" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="" disabled selected>Chọn môn học</option>
+                            <option value="math">Toán Học Cao Cấp</option>
+                            <option value="oop">Lập Trình Hướng Đối Tượng</option>
+                            <option value="database">Cơ Sở Dữ Liệu</option>
+                            <option value="english">Tiếng Anh Chuyên Ngành</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Đánh giá</label>
+                        <div class="flex text-2xl">
+                            <i class="far fa-star cursor-pointer rating-star" data-rating="1" style="color: #F59E0B;"></i>
+                            <i class="far fa-star cursor-pointer rating-star" data-rating="2" style="color: #F59E0B;"></i>
+                            <i class="far fa-star cursor-pointer rating-star" data-rating="3" style="color: #F59E0B;"></i>
+                            <i class="far fa-star cursor-pointer rating-star" data-rating="4" style="color: #F59E0B;"></i>
+                            <i class="far fa-star cursor-pointer rating-star" data-rating="5" style="color: #F59E0B;"></i>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="feedback-comment" class="block text-sm font-medium mb-2">Nhận xét</label>
+                        <textarea id="feedback-comment" rows="4" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Chia sẻ nhận xét của bạn về môn học này..."></textarea>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <button id="cancel-feedback-btn" class="px-4 py-2 border border-gray-300 rounded-md mr-2">Hủy</button>
+                        <button id="submit-feedback-btn" class="px-4 py-2 text-white rounded-md" style="background-color: var(--primary-color);">Gửi đánh giá</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Modal for subject detail -->
+<div id="subject-modal" class="modal">
+    <div class="modal-content p-6 max-w-2xl w-11/12">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold" id="modal-subject-title">Chi Tiết Môn Học</h3>
+            <button id="close-subject-modal" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+        <div id="modal-subject-content" class="overflow-y-auto max-h-[70vh]">
+            <!-- Dynamic Content -->
+        </div>
+    </div>
+</div>
+
+<!-- Add Subject Modal -->
+<div id="add-subject-modal" class="modal">
+    <div class="modal-content p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold">Thêm Môn Học Mới</h3>
+            <button id="close-add-subject-modal" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label for="new-subject-name" class="block text-sm font-medium mb-2">Tên môn học</label>
+                <input type="text" id="new-subject-name" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nhập tên môn học">
+            </div>
+            <div>
+                <label for="new-subject-teacher" class="block text-sm font-medium mb-2">Giảng viên</label>
+                <input type="text" id="new-subject-teacher" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nhập tên giảng viên">
+            </div>
+            <div>
+                <label for="new-subject-icon" class="block text-sm font-medium mb-2">Biểu tượng</label>
+                <select id="new-subject-icon" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option value="calculator">Toán học (Calculator)</option>
+                    <option value="code">Lập trình (Code)</option>
+                    <option value="database">Dữ liệu (Database)</option>
+                    <option value="language">Ngôn ngữ (Language)</option>
+                    <option value="atom">Khoa học (Atom)</option>
+                    <option value="book">Sách (Book)</option>
+                    <option value="chart-line">Thống kê (Chart)</option>
+                    <option value="globe">Địa lý (Globe)</option>
+                </select>
+            </div>
+            <div>
+                <label for="new-subject-credits" class="block text-sm font-medium mb-2">Số tín chỉ</label>
+                <input type="number" id="new-subject-credits" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nhập số tín chỉ" min="1" max="10">
+            </div>
+            <div>
+                <label for="new-subject-hours" class="block text-sm font-medium mb-2">Tổng số giờ học</label>
+                <input type="number" id="new-subject-hours" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nhập tổng số giờ học" min="15" max="100">
+            </div>
+            <div class="flex justify-end">
+                <button id="cancel-add-subject" class="px-4 py-2 border border-gray-300 rounded-md mr-2">Hủy</button>
+                <button id="confirm-add-subject" class="px-4 py-2 text-white rounded-md" style="background-color: var(--primary-color);">Thêm môn học</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Subject Modal -->
+<div id="edit-subject-modal" class="modal">
+    <div class="modal-content p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold">Chỉnh Sửa Môn Học</h3>
+            <button id="close-edit-subject-modal" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <input type="hidden" id="edit-subject-id">
+            <div>
+                <label for="edit-subject-name" class="block text-sm font-medium mb-2">Tên môn học</label>
+                <input type="text" id="edit-subject-name" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nhập tên môn học">
+            </div>
+            <div>
+                <label for="edit-subject-teacher" class="block text-sm font-medium mb-2">Giảng viên</label>
+                <input type="text" id="edit-subject-teacher" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nhập tên giảng viên">
+            </div>
+            <div>
+                <label for="edit-subject-icon" class="block text-sm font-medium mb-2">Biểu tượng</label>
+                <select id="edit-subject-icon" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option value="calculator">Toán học (Calculator)</option>
+                    <option value="code">Lập trình (Code)</option>
+                    <option value="database">Dữ liệu (Database)</option>
+                    <option value="language">Ngôn ngữ (Language)</option>
+                    <option value="atom">Khoa học (Atom)</option>
+                    <option value="book">Sách (Book)</option>
+                    <option value="chart-line">Thống kê (Chart)</option>
+                    <option value="globe">Địa lý (Globe)</option>
+                </select>
+            </div>
+            <div>
+                <label for="edit-subject-progress" class="block text-sm font-medium mb-2">Tiến độ (%)</label>
+                <input type="number" id="edit-subject-progress" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nhập tiến độ" min="0" max="100">
+            </div>
+            <div class="flex justify-end">
+                <button id="cancel-edit-subject" class="px-4 py-2 border border-gray-300 rounded-md mr-2">Hủy</button>
+                <button id="confirm-edit-subject" class="px-4 py-2 text-white rounded-md" style="background-color: var(--primary-color);">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Grade Modal -->
+<div id="edit-grade-modal" class="modal">
+    <div class="modal-content p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold">Chỉnh Sửa Điểm</h3>
+            <button id="close-edit-grade-modal" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <input type="hidden" id="edit-grade-subject-id">
+            <div>
+                <p id="edit-grade-subject-name" class="font-medium mb-4">Môn học: </p>
+            </div>
+            <div>
+                <label for="edit-grade-midterm" class="block text-sm font-medium mb-2">Điểm quá trình</label>
+                <input type="number" id="edit-grade-midterm" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" min="0" max="10" step="0.1">
+            </div>
+            <div>
+                <label for="edit-grade-final" class="block text-sm font-medium mb-2">Điểm thi</label>
+                <input type="number" id="edit-grade-final" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" min="0" max="10" step="0.1">
+            </div>
+            <div class="flex justify-end">
+                <button id="cancel-edit-grade" class="px-4 py-2 border border-gray-300 rounded-md mr-2">Hủy</button>
+                <button id="confirm-edit-grade" class="px-4 py-2 text-white rounded-md" style="background-color: var(--primary-color);">Lưu điểm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Schedule Modal -->
+<div id="add-schedule-modal" class="modal">
+    <div class="modal-content p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold">Thêm Lịch Học</h3>
+            <button id="close-add-schedule-modal" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label for="schedule-subject" class="block text-sm font-medium mb-2">Môn học</label>
+                <select id="schedule-subject" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option value="math">Toán Học Cao Cấp</option>
+                    <option value="oop">Lập Trình Hướng Đối Tượng</option>
+                    <option value="database">Cơ Sở Dữ Liệu</option>
+                    <option value="english">Tiếng Anh Chuyên Ngành</option>
+                </select>
+            </div>
+            <div>
+                <label for="schedule-date" class="block text-sm font-medium mb-2">Ngày học</label>
+                <input type="date" id="schedule-date" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="schedule-start" class="block text-sm font-medium mb-2">Thời gian bắt đầu</label>
+                    <input type="time" id="schedule-start" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                </div>
+                <div>
+                    <label for="schedule-end" class="block text-sm font-medium mb-2">Thời gian kết thúc</label>
+                    <input type="time" id="schedule-end" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary">
+                </div>
+            </div>
+            <div>
+                <label for="schedule-location" class="block text-sm font-medium mb-2">Địa điểm</label>
+                <input type="text" id="schedule-location" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Nhập phòng học hoặc địa điểm">
+            </div>
+            <div>
+                <label for="schedule-note" class="block text-sm font-medium mb-2">Ghi chú (tùy chọn)</label>
+                <textarea id="schedule-note" rows="2" class="w-full p-3 border border-gray-300 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Thêm ghi chú về buổi học..."></textarea>
+            </div>
+            <div class="flex justify-end">
+                <button id="cancel-add-schedule" class="px-4 py-2 border border-gray-300 rounded-md mr-2">Hủy</button>
+                <button id="confirm-add-schedule" class="px-4 py-2 text-white rounded-md" style="background-color: var(--primary-color);">Thêm lịch học</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Theme Toggle
+const body = document.body;
+const themeToggle = document.getElementById('theme-toggle');
+const themeIcon = themeToggle.querySelector('i');
+
+// Check for system preference
+const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+if (prefersDarkScheme.matches) {
+    body.classList.remove('light');
+    body.classList.add('dark');
+    themeIcon.classList.remove('fa-moon');
+    themeIcon.classList.add('fa-sun');
+}
+
+themeToggle.addEventListener('click', () => {
+    if (body.classList.contains('light')) {
+        body.classList.remove('light');
+        body.classList.add('dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+    } else {
+        body.classList.remove('dark');
+        body.classList.add('light');
+        themeIcon.classList.remove('fa-sun');
+        themeIcon.classList.add('fa-moon');
+    }
+});
+
+// Tab Navigation
+const tabButtons = document.querySelectorAll('.tab-button');
+const tabContents = document.querySelectorAll('.tab-content');
+
+tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const tabId = button.getAttribute('data-tab');
+        
+        // Remove active class from all buttons and contents
+        tabButtons.forEach(btn => {
+            btn.classList.remove('bg-primary', 'text-white');
+            btn.style.backgroundColor = '';
+            btn.style.color = '';
+        });
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        // Add active class to clicked button and corresponding content
+        button.classList.add('bg-primary', 'text-white');
+        button.style.backgroundColor = 'var(--primary-color)';
+        button.style.color = 'white';
+        document.getElementById(tabId).classList.add('active');
+    });
+});
+
+// Initialize first tab as active
+tabButtons[0].classList.add('bg-primary', 'text-white');
+tabButtons[0].style.backgroundColor = 'var(--primary-color)';
+tabButtons[0].style.color = 'white';
+
+// Document Filtering
+const documentFilter = document.getElementById('document-filter');
+const documentSearch = document.getElementById('document-search');
+const documentItems = document.querySelectorAll('.document-item');
+
+function filterDocuments() {
+    const filterValue = documentFilter.value;
+    const searchText = documentSearch.value.toLowerCase();
+    
+    documentItems.forEach(item => {
+        const subject = item.getAttribute('data-subject');
+        const title = item.querySelector('h3').textContent.toLowerCase();
+        const description = item.querySelector('p').textContent.toLowerCase();
+        
+        const matchesFilter = filterValue === 'all' || subject === filterValue;
+        const matchesSearch = searchText === '' || 
+                            title.includes(searchText) || 
+                            description.includes(searchText);
+        
+        if (matchesFilter && matchesSearch) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+documentFilter.addEventListener('change', filterDocuments);
+documentSearch.addEventListener('input', filterDocuments);
+
+// Modal handling
+const subjectModal = document.getElementById('subject-modal');
+const addSubjectModal = document.getElementById('add-subject-modal');
+const editSubjectModal = document.getElementById('edit-subject-modal');
+const editGradeModal = document.getElementById('edit-grade-modal');
+const addScheduleModal = document.getElementById('add-schedule-modal');
+const closeSubjectModalBtn = document.getElementById('close-subject-modal');
+const closeAddSubjectModalBtn = document.getElementById('close-add-subject-modal');
+const closeEditSubjectModalBtn = document.getElementById('close-edit-subject-modal');
+const closeEditGradeModalBtn = document.getElementById('close-edit-grade-modal');
+const closeAddScheduleModalBtn = document.getElementById('close-add-schedule-modal');
+const viewSubjectBtns = document.querySelectorAll('.view-subject-btn');
+const editSubjectBtns = document.querySelectorAll('.edit-subject-btn');
+const addSubjectBtn = document.getElementById('add-subject-btn');
+const addScheduleBtn = document.getElementById('add-schedule-btn');
+const modalSubjectTitle = document.getElementById('modal-subject-title');
+const modalSubjectContent = document.getElementById('modal-subject-content');
+
+function toggleModal(modal, show) {
+    if (show) {
+        modal.classList.add('active');
+        setTimeout(() => {
+            modal.querySelector('.modal-content').style.transform = 'translateY(0)';
+        }, 10);
+    } else {
+        modal.querySelector('.modal-content').style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            modal.classList.remove('active');
+        }, 300);
+    }
+}
+
+// Subject detail modal
+viewSubjectBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const subjectCard = e.target.closest('.subject-item');
+        const subjectTitle = subjectCard.querySelector('h3').textContent;
+        const subjectTeacher = subjectCard.querySelector('p').textContent;
+        const subjectIcon = subjectCard.querySelector('i').classList[1];
+        const subjectId = subjectCard.getAttribute('data-subject-id');
+        
+        modalSubjectTitle.textContent = subjectTitle;
+        
+        const progressValue = subjectCard.querySelector('.progress-bar-fill').style.width;
+        const progress = progressValue.replace('%', '');
+        
+        let iconClass;
+        if (subjectIcon.includes('calculator')) {
+            iconClass = 'fa-calculator';
+        } else if (subjectIcon.includes('code')) {
+            iconClass = 'fa-code';
+        } else if (subjectIcon.includes('database')) {
+            iconClass = 'fa-database';
+        } else if (subjectIcon.includes('language')) {
+            iconClass = 'fa-language';
+        }
+        
+        // Generate content based on subject
+        let subjectDescs = {
+            'Toán Học Cao Cấp': 'Môn học cung cấp kiến thức về đại số tuyến tính, giải tích và hình học không gian. Sinh viên sẽ được học về ma trận, hệ phương trình, đạo hàm, tích phân và các ứng dụng trong khoa học máy tính.',
+            'Lập Trình Hướng Đối Tượng': 'Môn học giới thiệu các khái niệm trong lập trình hướng đối tượng như lớp, đối tượng, kế thừa, đa hình và đóng gói. Sinh viên thực hành với ngôn ngữ Java và phát triển các ứng dụng nhỏ.',
+            'Cơ Sở Dữ Liệu': 'Môn học tập trung vào thiết kế, quản lý và truy vấn cơ sở dữ liệu. Sinh viên sẽ học về mô hình ER, chuẩn hóa CSDL, ngôn ngữ SQL và các hệ quản trị CSDL phổ biến.',
+            'Tiếng Anh Chuyên Ngành': 'Môn học phát triển kỹ năng tiếng Anh trong lĩnh vực CNTT. Sinh viên được học từ vựng chuyên ngành, đọc hiểu tài liệu kỹ thuật và thực hành giao tiếp trong môi trường công nghệ.'
+        };
+        
+        let subjectDesc = subjectDescs[subjectTitle] || 'Mô tả môn học chưa cập nhật.';
+        
+        modalSubjectContent.innerHTML = `
+            <div class="flex items-center mb-6">
+                <div class="w-16 h-16 rounded-full flex items-center justify-center mr-4" style="background-color: rgba(93, 92, 222, 0.2);">
+                    <i class="fas ${iconClass} text-2xl" style="color: var(--primary-color);"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg">${subjectTitle}</h4>
+                    <p class="text-sm opacity-75">${subjectTeacher}</p>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h5 class="font-medium mb-2">Mô tả môn học</h5>
+                <p>${subjectDesc}</p>
+            </div>
+            
+            <div class="mb-6">
+                <h5 class="font-medium mb-2">Tiến độ học tập</h5>
+                <div class="flex justify-between mb-2">
+                    <span>Hoàn thành</span>
+                    <span>${progress}%</span>
+                </div>
+                <div class="progress-bar mb-2">
+                    <div class="progress-bar-fill" style="width: ${progress}%"></div>
+                </div>
+                <p class="text-sm">Bạn đã hoàn thành ${progress}% nội dung môn học này.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="card rounded-lg p-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 rounded-full" style="background-color: rgba(93, 92, 222, 0.1);">
+                            <i class="fas fa-clock" style="color: var(--primary-color);"></i>
+                        </div>
+                        <div>
+                            <h6 class="font-medium">Thời lượng</h6>
+                            <p class="text-sm opacity-75">45 giờ</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card rounded-lg p-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 rounded-full" style="background-color: rgba(93, 92, 222, 0.1);">
+                            <i class="fas fa-calendar-alt" style="color: var(--primary-color);"></i>
+                        </div>
+                        <div>
+                            <h6 class="font-medium">Lịch học</h6>
+                            <p class="text-sm opacity-75">Thứ 2, 4, 6</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card rounded-lg p-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 rounded-full" style="background-color: rgba(93, 92, 222, 0.1);">
+                            <i class="fas fa-book" style="color: var(--primary-color);"></i>
+                        </div>
+                        <div>
+                            <h6 class="font-medium">Tài liệu</h6>
+                            <p class="text-sm opacity-75">5 tài liệu</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card rounded-lg p-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 rounded-full" style="background-color: rgba(93, 92, 222, 0.1);">
+                            <i class="fas fa-star" style="color: var(--primary-color);"></i>
+                        </div>
+                        <div>
+                            <h6 class="font-medium">Đánh giá</h6>
+                            <p class="text-sm opacity-75">4.5/5.0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h5 class="font-medium mb-2">Nội dung môn học</h5>
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <div class="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center mr-2">
+                            <i class="fas fa-check text-white text-xs"></i>
+                        </div>
+                        <span>Chương 1: Giới thiệu tổng quan</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center mr-2">
+                            <i class="fas fa-check text-white text-xs"></i>
+                        </div>
+                        <span>Chương 2: Kiến thức cơ bản</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center mr-2">
+                            <i class="fas fa-check text-white text-xs"></i>
+                        </div>
+                        <span>Chương 3: Chuyên sâu phần 1</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-5 h-5 rounded-full bg-primary flex items-center justify-center mr-2" style="background-color: var(--primary-color);">
+                            <i class="fas fa-play text-white text-xs"></i>
+                        </div>
+                        <span>Chương 4: Chuyên sâu phần 2</span>
+                    </div>
+                    <div class="flex items-center opacity-50">
+                        <div class="w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center mr-2">
+                            <i class="fas fa-lock text-white text-xs"></i>
+                        </div>
+                        <span>Chương 5: Ứng dụng thực tế</span>
+                    </div>
+                    <div class="flex items-center opacity-50">
+                        <div class="w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center mr-2">
+                            <i class="fas fa-lock text-white text-xs"></i>
+                        </div>
+                        <span>Chương 6: Tổng kết và ôn tập</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-2">
+                <button class="px-4 py-2 border border-gray-300 rounded-md flex items-center">
+                    <i class="fas fa-file-download mr-1"></i> Tài liệu
+                </button>
+                <button class="px-4 py-2 text-white rounded-md flex items-center edit-subject-btn" data-subject-id="${subjectId}" style="background-color: var(--primary-color);">
+                    <i class="fas fa-edit mr-1"></i> Chỉnh sửa
+                </button>
+                <button class="px-4 py-2 text-white rounded-md flex items-center" style="background-color: var(--primary-color);">
+                    <i class="fas fa-play mr-1"></i> Tiếp tục học
+                </button>
+            </div>
+        `;
+        
+        // Add event listener to edit button in modal
+        const editBtnInModal = modalSubjectContent.querySelector('.edit-subject-btn');
+        if (editBtnInModal) {
+            editBtnInModal.addEventListener('click', () => {
+                openEditSubjectModal(subjectCard);
+                toggleModal(subjectModal, false);
+            });
+        }
+        
+        toggleModal(subjectModal, true);
+    });
+});
+
+// Edit Subject functionality
+function openEditSubjectModal(subjectCard) {
+    const subjectId = subjectCard.getAttribute('data-subject-id');
+    const subjectName = subjectCard.querySelector('h3').textContent;
+    const teacherInfo = subjectCard.querySelector('p').textContent;
+    const teacherName = teacherInfo.replace('Giảng viên: ', '');
+    const iconClass = subjectCard.querySelector('i').classList[1].replace('fa-', '');
+    const progressValue = subjectCard.querySelector('.progress-bar-fill').style.width;
+    const progress = progressValue.replace('%', '');
+    
+    document.getElementById('edit-subject-id').value = subjectId;
+    document.getElementById('edit-subject-name').value = subjectName;
+    document.getElementById('edit-subject-teacher').value = teacherName;
+    document.getElementById('edit-subject-icon').value = iconClass;
+    document.getElementById('edit-subject-progress').value = progress;
+    
+    toggleModal(editSubjectModal, true);
+}
+
+editSubjectBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const subjectCard = e.target.closest('.subject-item');
+        openEditSubjectModal(subjectCard);
+    });
+});
+
+document.getElementById('confirm-edit-subject').addEventListener('click', () => {
+    const subjectId = document.getElementById('edit-subject-id').value;
+    const subjectName = document.getElementById('edit-subject-name').value;
+    const teacherName = document.getElementById('edit-subject-teacher').value;
+    const iconClass = document.getElementById('edit-subject-icon').value;
+    const progress = document.getElementById('edit-subject-progress').value;
+    
+    if (subjectName && teacherName) {
+        const subjectCard = document.querySelector(`.subject-item[data-subject-id="${subjectId}"]`);
+        
+        if (subjectCard) {
+            // Update subject card
+            subjectCard.querySelector('h3').textContent = subjectName;
+            subjectCard.querySelector('p').textContent = `Giảng viên: ${teacherName}`;
+            subjectCard.querySelector('i').className = `fas fa-${iconClass} text-5xl`;
+            
+            const progressLabel = subjectCard.querySelector('.flex.justify-between.mb-2.text-sm span:last-child');
+            progressLabel.textContent = `${progress}%`;
+            
+            const progressBar = subjectCard.querySelector('.progress-bar-fill');
+            progressBar.style.width = `${progress}%`;
+            
+            // Update grade table if this subject exists there
+            const gradeRow = document.querySelector(`tr[data-subject-id="${subjectId}"]`);
+            if (gradeRow) {
+                gradeRow.querySelector('td:first-child').textContent = subjectName;
+            }
+            
+            toggleModal(editSubjectModal, false);
+            
+            // Show success notification
+            alert('Môn học đã được cập nhật thành công!');
+        }
+    }
+});
+
+closeEditSubjectModalBtn.addEventListener('click', () => {
+    toggleModal(editSubjectModal, false);
+});
+
+document.getElementById('cancel-edit-subject').addEventListener('click', () => {
+    toggleModal(editSubjectModal, false);
+});
+
+// Close subject modal
+closeSubjectModalBtn.addEventListener('click', () => {
+    toggleModal(subjectModal, false);
+});
+
+// Add Subject Modal
+addSubjectBtn.addEventListener('click', () => {
+    toggleModal(addSubjectModal, true);
+});
+
+closeAddSubjectModalBtn.addEventListener('click', () => {
+    toggleModal(addSubjectModal, false);
+});
+
+document.getElementById('cancel-add-subject').addEventListener('click', () => {
+    toggleModal(addSubjectModal, false);
+});
+
+document.getElementById('confirm-add-subject').addEventListener('click', () => {
+    const subjectName = document.getElementById('new-subject-name').value;
+    const teacherName = document.getElementById('new-subject-teacher').value;
+    const iconClass = document.getElementById('new-subject-icon').value;
+    const credits = document.getElementById('new-subject-credits').value;
+    const hours = document.getElementById('new-subject-hours').value;
+    
+    if (subjectName && teacherName) {
+        const subjectsList = document.getElementById('subjects-list');
+        const subjectId = `subject-${Date.now()}`;
+        
+        const newSubject = document.createElement('div');
+        newSubject.className = 'card rounded-lg overflow-hidden transition-all duration-300 subject-item';
+        newSubject.setAttribute('data-subject-id', subjectId);
+        newSubject.innerHTML = `
+            <div class="h-32 flex items-center justify-center" style="background-color: rgba(93, 92, 222, 0.2);">
+                <i class="fas fa-${iconClass} text-5xl" style="color: var(--primary-color);"></i>
+            </div>
+            <div class="p-4">
+                <h3 class="font-bold text-lg mb-2">${subjectName}</h3>
+                <p class="text-sm mb-3 opacity-75">Giảng viên: ${teacherName}</p>
+                <div class="flex justify-between mb-2 text-sm">
+                    <span>Tiến độ</span>
+                    <span>0%</span>
+                </div>
+                <div class="progress-bar mb-3">
+                    <div class="progress-bar-fill" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between">
+                    <button class="text-sm font-medium px-3 py-1 rounded view-subject-btn" style="color: var(--primary-color);">
+                        Xem chi tiết <i class="fas fa-arrow-right ml-1"></i>
+                    </button>
+                    <button class="text-sm font-medium px-3 py-1 rounded edit-subject-btn" style="color: var(--primary-color);">
+                        <i class="fas fa-edit"></i> Sửa
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        subjectsList.appendChild(newSubject);
+        
+        // Add event listener for view button
+        const viewButton = newSubject.querySelector('.view-subject-btn');
+        viewButton.addEventListener('click', (e) => {
+            const subjectCard = e.target.closest('.subject-item');
+            const subjectTitle = subjectCard.querySelector('h3').textContent;
+            const subjectTeacher = subjectCard.querySelector('p').textContent;
+            
+            modalSubjectTitle.textContent = subjectTitle;
+            modalSubjectContent.innerHTML = `
+                <div class="flex items-center mb-6">
+                    <div class="w-16 h-16 rounded-full flex items-center justify-center mr-4" style="background-color: rgba(93, 92, 222, 0.2);">
+                        <i class="fas fa-${iconClass} text-2xl" style="color: var(--primary-color);"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-lg">${subjectTitle}</h4>
+                        <p class="text-sm opacity-75">${subjectTeacher}</p>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h5 class="font-medium mb-2">Mô tả môn học</h5>
+                    <p>Chưa có mô tả chi tiết cho môn học này.</p>
+                </div>
+                
+                <div class="mb-6">
+                    <h5 class="font-medium mb-2">Tiến độ học tập</h5>
+                    <div class="flex justify-between mb-2">
+                        <span>Hoàn thành</span>
+                        <span>0%</span>
+                    </div>
+                    <div class="progress-bar mb-2">
+                        <div class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm">Bạn chưa bắt đầu học môn học này.</p>
+                </div>
+                
+                <div class="flex justify-end space-x-2">
+                    <button class="px-4 py-2 border border-gray-300 rounded-md flex items-center">
+                        <i class="fas fa-file-download mr-1"></i> Tài liệu
+                    </button>
+                    <button class="px-4 py-2 text-white rounded-md flex items-center edit-subject-btn" data-subject-id="${subjectId}" style="background-color: var(--primary-color);">
+                        <i class="fas fa-edit mr-1"></i> Chỉnh sửa
+                    </button>
+                    <button class="px-4 py-2 text-white rounded-md flex items-center" style="background-color: var(--primary-color);">
+                        <i class="fas fa-play mr-1"></i> Bắt đầu học
+                    </button>
+                </div>
+            `;
+            
+            // Add event listener to edit button in modal
+            const editBtnInModal = modalSubjectContent.querySelector('.edit-subject-btn');
+            if (editBtnInModal) {
+                editBtnInModal.addEventListener('click', () => {
+                    openEditSubjectModal(subjectCard);
+                    toggleModal(subjectModal, false);
+                });
+            }
+            
+            toggleModal(subjectModal, true);
+        });
+        
+        // Add event listener for edit button
+        const editButton = newSubject.querySelector('.edit-subject-btn');
+        editButton.addEventListener('click', (e) => {
+            const subjectCard = e.target.closest('.subject-item');
+            openEditSubjectModal(subjectCard);
+        });
+        
+        // Add subject to grades table
+        const gradesTable = document.querySelector('#grades-table tbody');
+        const newSubjectCode = subjectName.substring(0, 3).toUpperCase() + Math.floor(100 + Math.random() * 900);
+        
+        const newRow = document.createElement('tr');
+        newRow.setAttribute('data-subject-id', subjectId);
+        newRow.innerHTML = `
+            <td class="px-4 py-3">${subjectName}</td>
+            <td class="px-4 py-3">${newSubjectCode}</td>
+            <td class="px-4 py-3">${credits || 3}</td>
+            <td class="px-4 py-3 editable-cell" data-field="midterm">0.0</td>
+            <td class="px-4 py-3 editable-cell" data-field="final">0.0</td>
+            <td class="px-4 py-3 font-medium average-grade">0.0</td>
+            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 grade-label">Chưa đạt</span></td>
+            <td class="px-4 py-3 text-center">
+                <button class="p-1 edit-grade-btn edit-button" style="color: var(--primary-color);">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </td>
+        `;
+        
+        gradesTable.appendChild(newRow);
+        
+        // Add event listener for grade edit button
+        const gradeEditBtn = newRow.querySelector('.edit-grade-btn');
+        gradeEditBtn.addEventListener('click', () => {
+            openEditGradeModal(newRow);
+        });
+        
+        // Update total credits
+        updateGradeStatistics();
+        
+        toggleModal(addSubjectModal, false);
+        
+        // Reset form
+        document.getElementById('new-subject-name').value = '';
+        document.getElementById('new-subject-teacher').value = '';
+        document.getElementById('new-subject-credits').value = '';
+        document.getElementById('new-subject-hours').value = '';
+        
+        alert('Môn học mới đã được thêm thành công!');
+    }
+});
+
+// Edit Grade functionality
+const editGradeButtons = document.querySelectorAll('.edit-grade-btn');
+const editGradesToggle = document.getElementById('edit-grades-toggle');
+
+// Function to update grade statistics
+function updateGradeStatistics() {
+    const rows = document.querySelectorAll('#grades-table tbody tr');
+    let totalCredits = 0;
+    let weightedSum = 0;
+    let grades = [];
+    
+    rows.forEach(row => {
+        const credits = parseInt(row.querySelector('td:nth-child(3)').textContent);
+        const avg = parseFloat(row.querySelector('.average-grade').textContent);
+        
+        if (!isNaN(credits) && !isNaN(avg)) {
+            totalCredits += credits;
+            weightedSum += credits * avg;
+            grades.push({
+                subject: row.querySelector('td:first-child').textContent,
+                grade: avg
+            });
+        }
+    });
+    
+    // Calculate GPA
+    const gpa = totalCredits > 0 ? (weightedSum / totalCredits).toFixed(1) : '0.0';
+    
+    // Update semester average
+    document.getElementById('semester-average').textContent = gpa;
+    document.getElementById('overall-gpa').textContent = gpa;
+    document.getElementById('total-credits').textContent = totalCredits;
+    
+    // Sort grades for highest and lowest
+    grades.sort((a, b) => b.grade - a.grade);
+    
+    if (grades.length > 0) {
+        document.getElementById('highest-grade').textContent = grades[0].grade.toFixed(1);
+        document.getElementById('highest-subject').textContent = grades[0].subject;
+        
+        document.getElementById('lowest-grade').textContent = grades[grades.length - 1].grade.toFixed(1);
+        document.getElementById('lowest-subject').textContent = grades[grades.length - 1].subject;
+    }
+    
+    // Update semester grade label
+    let semesterGradeLabel = '';
+    if (gpa >= 9.0) {
+        semesterGradeLabel = 'Xuất sắc';
+        document.getElementById('semester-grade-label').className = 'px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800';
+    } else if (gpa >= 8.0) {
+        semesterGradeLabel = 'Giỏi';
+        document.getElementById('semester-grade-label').className = 'px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800';
+    } else if (gpa >= 7.0) {
+        semesterGradeLabel = 'Khá';
+        document.getElementById('semester-grade-label').className = 'px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800';
+    } else if (gpa >= 5.0) {
+        semesterGradeLabel = 'Trung bình';
+        document.getElementById('semester-grade-label').className = 'px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
+    } else {
+        semesterGradeLabel = 'Chưa đạt';
+        document.getElementById('semester-grade-label').className = 'px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800';
+    }
+    document.getElementById('semester-grade-label').textContent = semesterGradeLabel;
+    
+    // Update grade distribution
+    let excellent = 0, great = 0, good = 0, average = 0;
+    
+    grades.forEach(g => {
+        if (g.grade >= 9.0) excellent++;
+        else if (g.grade >= 8.0) great++;
+        else if (g.grade >= 7.0) good++;
+        else if (g.grade >= 5.0) average++;
+    });
+    
+    document.getElementById('excellent-count').textContent = `${excellent} môn`;
+    document.getElementById('great-count').textContent = `${great} môn`;
+    document.getElementById('good-count').textContent = `${good} môn`;
+    document.getElementById('average-count').textContent = `${average} môn`;
+    
+    const total = grades.length;
+    if (total > 0) {
+        document.getElementById('excellent-bar').style.width = `${(excellent / total) * 100}%`;
+        document.getElementById('great-bar').style.width = `${(great / total) * 100}%`;
+        document.getElementById('good-bar').style.width = `${(good / total) * 100}%`;
+        document.getElementById('average-bar').style.width = `${(average / total) * 100}%`;
+    }
+}
+
+function openEditGradeModal(row) {
+    const subjectId = row.getAttribute('data-subject-id');
+    const subjectName = row.querySelector('td:first-child').textContent;
+    const midtermGrade = row.querySelector('td[data-field="midterm"]').textContent;
+    const finalGrade = row.querySelector('td[data-field="final"]').textContent;
+    
+    document.getElementById('edit-grade-subject-id').value = subjectId;
+    document.getElementById('edit-grade-subject-name').textContent = `Môn học: ${subjectName}`;
+    document.getElementById('edit-grade-midterm').value = midtermGrade;
+    document.getElementById('edit-grade-final').value = finalGrade;
+    
+    toggleModal(editGradeModal, true);
+}
+
+editGradeButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const row = e.target.closest('tr');
+        openEditGradeModal(row);
+    });
+});
+
+document.getElementById('confirm-edit-grade').addEventListener('click', () => {
+    const subjectId = document.getElementById('edit-grade-subject-id').value;
+    const midtermGrade = parseFloat(document.getElementById('edit-grade-midterm').value);
+    const finalGrade = parseFloat(document.getElementById('edit-grade-final').value);
+    
+    if (!isNaN(midtermGrade) && !isNaN(finalGrade)) {
+        const row = document.querySelector(`tr[data-subject-id="${subjectId}"]`);
+        
+        if (row) {
+            // Update grades in the table
+            row.querySelector('td[data-field="midterm"]').textContent = midtermGrade.toFixed(1);
+            row.querySelector('td[data-field="final"]').textContent = finalGrade.toFixed(1);
+            
+            // Calculate average (midterm 40%, final 60%)
+            const avgGrade = (midtermGrade * 0.4 + finalGrade * 0.6).toFixed(1);
+            row.querySelector('.average-grade').textContent = avgGrade;
+            
+            // Update grade label
+            const gradeLabel = row.querySelector('.grade-label');
+            if (avgGrade >= 9.0) {
+                gradeLabel.textContent = 'Xuất sắc';
+                gradeLabel.className = 'px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 grade-label';
+            } else if (avgGrade >= 8.0) {
+                gradeLabel.textContent = 'Giỏi';
+                gradeLabel.className = 'px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 grade-label';
+            } else if (avgGrade >= 7.0) {
+                gradeLabel.textContent = 'Khá';
+                gradeLabel.className = 'px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 grade-label';
+            } else if (avgGrade >= 5.0) {
+                gradeLabel.textContent = 'Trung bình';
+                gradeLabel.className = 'px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 grade-label';
+            } else {
+                gradeLabel.textContent = 'Chưa đạt';
+                gradeLabel.className = 'px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 grade-label';
+            }
+            
+            // Update overall statistics
+            updateGradeStatistics();
+            
+            toggleModal(editGradeModal, false);
+            alert('Điểm đã được cập nhật thành công!');
+        }
+    }
+});
+
+closeEditGradeModalBtn.addEventListener('click', () => {
+    toggleModal(editGradeModal, false);
+});
+
+document.getElementById('cancel-edit-grade').addEventListener('click', () => {
+    toggleModal(editGradeModal, false);
+});
+
+// Initialize grade statistics
+updateGradeStatistics();
+
+// Add Schedule Modal
+addScheduleBtn.addEventListener('click', () => {
+    toggleModal(addScheduleModal, true);
+});
+
+closeAddScheduleModalBtn.addEventListener('click', () => {
+    toggleModal(addScheduleModal, false);
+});
+
+document.getElementById('cancel-add-schedule').addEventListener('click', () => {
+    toggleModal(addScheduleModal, false);
+});
+
+document.getElementById('confirm-add-schedule').addEventListener('click', () => {
+    // In a full implementation, we would add the schedule to a calendar
+    // For this demo, we'll just close the modal with a simulated success
+    toggleModal(addScheduleModal, false);
+    
+    // Reset form
+    document.getElementById('schedule-subject').selectedIndex = 0;
+    document.getElementById('schedule-date').value = '';
+    document.getElementById('schedule-start').value = '';
+    document.getElementById('schedule-end').value = '';
+    document.getElementById('schedule-location').value = '';
+    document.getElementById('schedule-note').value = '';
+    
+    alert('Lịch học mới đã được thêm thành công!');
+});
+
+// Document Upload
+const uploadDocumentBtn = document.getElementById('upload-document-btn');
+const uploadArea = document.getElementById('upload-area');
+const cancelUploadBtn = document.getElementById('cancel-upload-btn');
+const submitDocumentBtn = document.getElementById('submit-document-btn');
+
+uploadDocumentBtn.addEventListener('click', () => {
+    uploadArea.classList.remove('hidden');
+    uploadDocumentBtn.classList.add('hidden');
+});
+
+cancelUploadBtn.addEventListener('click', () => {
+    uploadArea.classList.add('hidden');
+    uploadDocumentBtn.classList.remove('hidden');
+    
+    // Reset form
+    document.getElementById('document-title').value = '';
+    document.getElementById('document-subject').selectedIndex = 0;
+    document.getElementById('document-file').value = '';
+});
+
+submitDocumentBtn.addEventListener('click', () => {
+    const documentTitle = document.getElementById('document-title').value;
+    const documentSubject = document.getElementById('document-subject').value;
+    const documentFile = document.getElementById('document-file').value;
+    
+    if (documentTitle && documentSubject) {
+        // Get subject name from value
+        const subjectSelect = document.getElementById('document-subject');
+        const subjectName = subjectSelect.options[subjectSelect.selectedIndex].text;
+        
+        // Create new document item
+        const documentsList = document.getElementById('documents-list');
+        
+        let iconClass, bgClass;
+        if (documentFile.endsWith('.pdf')) {
+            iconClass = 'fa-file-pdf';
+            bgClass = 'bg-red-100 text-red-500';
+        } else if (documentFile.endsWith('.docx') || documentFile.endsWith('.doc')) {
+            iconClass = 'fa-file-word';
+            bgClass = 'bg-blue-100 text-blue-500';
+        } else if (documentFile.endsWith('.xlsx') || documentFile.endsWith('.xls')) {
+            iconClass = 'fa-file-excel';
+            bgClass = 'bg-green-100 text-green-500';
+        } else if (documentFile.endsWith('.pptx') || documentFile.endsWith('.ppt')) {
+            iconClass = 'fa-file-powerpoint';
+            bgClass = 'bg-yellow-100 text-yellow-500';
+        } else {
+            iconClass = 'fa-file-alt';
+            bgClass = 'bg-gray-100 text-gray-500';
+        }
+        
+        const newDocument = document.createElement('div');
+        newDocument.className = 'card rounded-lg p-4 flex flex-col md:flex-row md:items-center document-item';
+        newDocument.setAttribute('data-subject', documentSubject);
+        
+        const today = new Date();
+        const dateString = today.toLocaleDateString('vi-VN');
+        
+        newDocument.innerHTML = `
+            <div class="flex-shrink-0 mr-4 mb-3 md:mb-0">
+                <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center">
+                    <i class="fas ${iconClass} text-xl"></i>
+                </div>
+            </div>
+            <div class="flex-grow">
+                <h3 class="font-medium mb-1">${documentTitle}</h3>
+                <p class="text-sm opacity-75 mb-2">${subjectName} • File • 0.0MB</p>
+                <p class="text-xs opacity-75">Đã tải lên: ${dateString}</p>
+            </div>
+            <div class="flex items-center mt-3 md:mt-0">
+                <button class="p-2 rounded-md mr-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="p-2 rounded-md mr-2 hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i class="fas fa-star"></i>
+                </button>
+                <button class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+            </div>
+        `;
+        
+        documentsList.prepend(newDocument);
+        
+        // Reset
+        uploadArea.classList.add('hidden');
+        uploadDocumentBtn.classList.remove('hidden');
+        document.getElementById('document-title').value = '';
+        document.getElementById('document-subject').selectedIndex = 0;
+        document.getElementById('document-file').value = '';
+        
+        alert('Tài liệu mới đã được tải lên thành công!');
+    }
+});
+
+// Feedback form
+const addFeedbackBtn = document.getElementById('add-feedback-btn');
+const feedbackForm = document.getElementById('feedback-form');
+const cancelFeedbackBtn = document.getElementById('cancel-feedback-btn');
+const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
+const ratingStars = document.querySelectorAll('.rating-star');
+
+addFeedbackBtn.addEventListener('click', () => {
+    feedbackForm.classList.remove('hidden');
+    addFeedbackBtn.classList.add('hidden');
+});
+
+cancelFeedbackBtn.addEventListener('click', () => {
+    feedbackForm.classList.add('hidden');
+    addFeedbackBtn.classList.remove('hidden');
+    
+    // Reset form
+    document.getElementById('feedback-subject').selectedIndex = 0;
+    document.getElementById('feedback-comment').value = '';
+    ratingStars.forEach(star => {
+        star.classList.remove('fas');
+        star.classList.add('far');
+    });
+});
+
+// Star rating
+let currentRating = 0;
+
+ratingStars.forEach(star => {
+    star.addEventListener('mouseover', function() {
+        const rating = parseInt(this.getAttribute('data-rating'));
+        
+        // Reset all stars
+        ratingStars.forEach(s => {
+            s.classList.remove('fas');
+            s.classList.add('far');
+        });
+        
+        // Fill stars up to the hovered one
+        for (let i = 0; i < rating; i++) {
+            ratingStars[i].classList.remove('far');
+            ratingStars[i].classList.add('fas');
+        }
+    });
+    
+    star.addEventListener('mouseout', function() {
+        // Reset to current rating
+        ratingStars.forEach(s => {
+            s.classList.remove('fas');
+            s.classList.add('far');
+        });
+        
+        for (let i = 0; i < currentRating; i++) {
+            ratingStars[i].classList.remove('far');
+            ratingStars[i].classList.add('fas');
+        }
+    });
+    
+    star.addEventListener('click', function() {
+        currentRating = parseInt(this.getAttribute('data-rating'));
+        
+        // Set stars
+        ratingStars.forEach(s => {
+            s.classList.remove('fas');
+            s.classList.add('far');
+        });
+        
+        for (let i = 0; i < currentRating; i++) {
+            ratingStars[i].classList.remove('far');
+            ratingStars[i].classList.add('fas');
+        }
+    });
+});
+
+submitFeedbackBtn.addEventListener('click', () => {
+    const subjectSelect = document.getElementById('feedback-subject');
+    const feedbackComment = document.getElementById('feedback-comment').value;
+    
+    if (subjectSelect.value && currentRating > 0 && feedbackComment) {
+        const subjectName = subjectSelect.options[subjectSelect.selectedIndex].text;
+        
+        // Create new feedback
+        const today = new Date();
+        const dateString = today.toLocaleDateString('vi-VN');
+        
+        // Add to feedback list
+        const feedbackSection = document.querySelector('#feedback .lg\\:col-span-2 .space-y-6');
+        
+        const newFeedback = document.createElement('div');
+        newFeedback.className = 'card rounded-lg p-6';
+        
+        let starHTML = '';
+        for (let i = 1; i <= 5; i++) {
+            if (i <= currentRating) {
+                starHTML += `<i class="fas fa-star" style="color: #F59E0B;"></i>`;
+            } else {
+                starHTML += `<i class="far fa-star" style="color: #F59E0B;"></i>`;
+            }
+        }
+        
+        newFeedback.innerHTML = `
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="font-medium text-lg">${subjectName}</h3>
+                    <p class="text-sm opacity-75">Giảng viên: Thông tin chưa cập nhật</p>
+                </div>
+                <div class="flex items-center">
+                    <div class="flex">
+                        ${starHTML}
+                    </div>
+                    <span class="ml-2 font-medium">${currentRating}.0</span>
+                </div>
+            </div>
+            <p class="mb-4">${feedbackComment}</p>
+            <div class="flex justify-between text-sm">
+                <span class="opacity-75">Đánh giá vào: ${dateString}</span>
+                <div>
+                    <button class="text-blue-600 dark:text-blue-400 mr-3">Chỉnh sửa</button>
+                    <button class="text-red-600 dark:text-red-400">Xóa</button>
+                </div>
+            </div>
+        `;
+        
+        feedbackSection.prepend(newFeedback);
+        
+        // Reset
+        feedbackForm.classList.add('hidden');
+        addFeedbackBtn.classList.remove('hidden');
+        document.getElementById('feedback-subject').selectedIndex = 0;
+        document.getElementById('feedback-comment').value = '';
+        currentRating = 0;
+        ratingStars.forEach(star => {
+            star.classList.remove('fas');
+            star.classList.add('far');
+        });
+        
+        alert('Đánh giá mới đã được gửi thành công!');
+    }
+});
+
+// Close modals when clicking outside
+window.addEventListener('click', (e) => {
+    if (e.target === subjectModal) {
+        toggleModal(subjectModal, false);
+    }
+    if (e.target === addSubjectModal) {
+        toggleModal(addSubjectModal, false);
+    }
+    if (e.target === editSubjectModal) {
+        toggleModal(editSubjectModal, false);
+    }
+    if (e.target === editGradeModal) {
+        toggleModal(editGradeModal, false);
+    }
+    if (e.target === addScheduleModal) {
+        toggleModal(addScheduleModal, false);
+    }
+});
+</script>
+</body>
+</html>
